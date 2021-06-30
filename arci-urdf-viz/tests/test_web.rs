@@ -1,14 +1,21 @@
-mod web_server;
 use arci::{Localization, MoveBase, Navigation};
 use arci_urdf_viz::*;
 use assert_approx_eq::assert_approx_eq;
+use urdf_viz::WebServer;
 use url::Url;
-use web_server::*;
+
+#[easy_ext::ext]
+impl WebServer {
+    fn start_background(self) {
+        std::thread::spawn(move || self.start().unwrap());
+        std::thread::sleep(std::time::Duration::from_secs(1)); // Wait for web server to start.
+    }
+}
 
 #[test]
 fn test_set_get_vel() {
     const PORT: u16 = 8888;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.start_background();
     let c =
         UrdfVizWebClient::new(Url::parse(&format!("http://127.0.0.1:{}", PORT)).unwrap()).unwrap();
@@ -28,7 +35,7 @@ fn test_set_get_vel() {
 #[tokio::test]
 async fn test_set_get_pose() {
     const PORT: u16 = 8889;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.start_background();
     let c =
         UrdfVizWebClient::new(Url::parse(&format!("http://127.0.0.1:{}", PORT)).unwrap()).unwrap();
@@ -53,7 +60,7 @@ async fn test_set_get_pose() {
 #[test]
 fn test_set_get_pose_no_wait() {
     const PORT: u16 = 8890;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.start_background();
     let c =
         UrdfVizWebClient::new(Url::parse(&format!("http://127.0.0.1:{}", PORT)).unwrap()).unwrap();

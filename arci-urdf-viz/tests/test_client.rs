@@ -1,12 +1,22 @@
-mod web_server;
-
 use std::time::Duration;
 
 use arci::{BaseVelocity, JointTrajectoryClient, MoveBase, TrajectoryPoint};
 use arci_urdf_viz::{UrdfVizWebClient, UrdfVizWebClientConfig};
 use assert_approx_eq::assert_approx_eq;
+use urdf_viz::{JointNamesAndPositions, WebServer};
 use url::Url;
-use web_server::*;
+
+#[easy_ext::ext]
+impl WebServer {
+    fn start_background(self) {
+        std::thread::spawn(move || self.start().unwrap());
+        std::thread::sleep(std::time::Duration::from_secs(1)); // Wait for web server to start.
+    }
+
+    fn set_current_joint_positions(&self, joint_positions: JointNamesAndPositions) {
+        *self.handle().current_joint_positions.lock().unwrap() = joint_positions;
+    }
+}
 
 #[test]
 fn test_urdf_viz_web_client_config_accessor() {
@@ -89,7 +99,7 @@ fn test_urdf_viz_web_client_config_clone() {
 #[test]
 fn test_create_joint_trajectory_clients() {
     const DEFAULT_PORT: u16 = 7777;
-    let web_server = WebServer::new(DEFAULT_PORT);
+    let web_server = WebServer::new(DEFAULT_PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned(), "j2".to_owned()],
         positions: vec![1.0, -1.0],
@@ -119,7 +129,7 @@ fn test_create_joint_trajectory_clients() {
 #[test]
 fn test_current_joint_positions() {
     const PORT: u16 = 7778;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned(), "j2".to_owned()],
         positions: vec![1.0, -1.0],
@@ -135,7 +145,7 @@ fn test_current_joint_positions() {
 #[tokio::test]
 async fn test_send_joint_positions() {
     const PORT: u16 = 7780;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned()],
         positions: vec![0.0],
@@ -156,7 +166,7 @@ async fn test_send_joint_positions() {
 #[test]
 fn test_send_joint_positions_no_wait() {
     const PORT: u16 = 7781;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned()],
         positions: vec![0.0],
@@ -178,7 +188,7 @@ fn test_send_joint_positions_no_wait() {
 #[tokio::test]
 async fn test_send_joint_trajectory() {
     const PORT: u16 = 7782;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned()],
         positions: vec![0.0],
@@ -220,7 +230,7 @@ async fn test_send_joint_trajectory() {
 #[should_panic = "send_joint_positions called without run_send_joint_positions_thread being called first"]
 fn send_joint_positions_without_send_joint_positions_thread() {
     const PORT: u16 = 7783;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.set_current_joint_positions(JointNamesAndPositions {
         names: vec!["j1".to_owned()],
         positions: vec![0.0],
@@ -237,7 +247,7 @@ fn send_joint_positions_without_send_joint_positions_thread() {
 #[should_panic = "send_velocity called without run_send_velocity_thread being called first"]
 fn send_velocity_without_send_velocity_thread() {
     const PORT: u16 = 7784;
-    let web_server = WebServer::new(PORT);
+    let web_server = WebServer::new(PORT, Default::default());
     web_server.start_background();
     let client =
         UrdfVizWebClient::new(Url::parse(&format!("http://127.0.0.1:{}", PORT)).unwrap()).unwrap();
