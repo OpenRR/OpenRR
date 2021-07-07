@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
 use arci::{Error, JointTrajectoryClient, TrajectoryPoint, WaitFuture};
+
+use crate::SelfCollisionChecker;
 
 // TODO: speed limit
 fn trajectory_from_positions(
@@ -23,8 +27,7 @@ where
 {
     pub client: T,
     /// using_joints and collision_check_robot must share the k::Node instance.
-    pub using_joints: k::Chain<f64>,
-    pub collision_check_robot: &'a k::Chain<f64>,
+    pub collision_checker: Arc<SelfCollisionChecker>,
     pub planner: openrr_planner::JointPathPlanner<f64>,
 }
 
@@ -34,8 +37,7 @@ where
 {
     pub fn new(
         client: T,
-        using_joints: k::Chain<f64>,
-        collision_check_robot: &'a k::Chain<f64>,
+        collision_checker: Arc<SelfCollisionChecker>,
         planner: openrr_planner::JointPathPlanner<f64>,
     ) -> Self {
         Self {
